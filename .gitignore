@@ -36,6 +36,7 @@
 ehthumbs.db
 Thumbs.db
 /node_modules
+node_modules
 /dist
 /build
 .env
