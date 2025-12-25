@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>404 - Not Found</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            padding: 40px;
+        }
+
+        a {
+            color: inherit;
+        }
+
+        code {
+            background: #f3f3f3;
+            padding: 2px 6px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>404</h1>
+    <p>Couldn’t find <code id="path"></code></p>
+    <p><a href="/">Go home</a></p>
+
+    <script>
+        document.getElementById("path").textContent = window.location.pathname;
+    </script>
+</body>
+
+</html>

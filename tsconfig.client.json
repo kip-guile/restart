@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM"],
+    "jsx": "react-jsx", // enables the new JSX transform
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+
+    "noEmit": true,
+  },
+  "include": ["src/client/**/*.ts", "src/client/**/*.tsx"]
+}
