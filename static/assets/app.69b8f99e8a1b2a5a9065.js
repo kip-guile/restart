@@ -1,1 +1,0 @@
-(()=>{"use strict";const e=document.getElementById("app");if(!e)throw new Error("Missing element with id 'app'");e.textContent="This is Alexander's project. He's having fun over here with webpack."})();
