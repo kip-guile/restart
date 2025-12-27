@@ -8,10 +8,12 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.server.json",
+    "build": "npm run build:client && npm run build:server",
     "start": "node dist/index.js",
     "build:client": "webpack --mode production",
+    "build:server": "tsc -p tsconfig.server.json",
     "dev:client": "webpack serve --mode development",
+    "prod:local": "npm run build && npm run start",
     "analyze:client": "ANALYZE=true webpack --mode production",
     "typecheck:client": "tsc -p tsconfig.client.json",
     "lint": "eslint .",
@@ -21,9 +23,11 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^2.11.2",
     "express": "^5.2.1",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
+    "react-redux": "^9.2.0",
     "react-router-dom": "^7.11.0"
   },
   "devDependencies": {

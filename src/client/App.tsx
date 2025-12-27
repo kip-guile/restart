@@ -1,5 +1,8 @@
 import React from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Link, Route, Routes } from "react-router-dom";
+import type { RootState, AppDispatch } from "./store/store";
+import { setMessage as setGlobalMessage } from "./store/store";
 
 function Home() {
     const [message, setMessage] = React.useState<string>("Loading...");
@@ -35,9 +38,27 @@ function Home() {
 }
 
 function About() {
+  const dispatch = useDispatch<AppDispatch>();
+  const message = useSelector((s: RootState) => s.app.message);
+
+  React.useEffect(() => {
+    // In prod, message can already exist from injected state, so do nothing
+    if (message) return;
+
+    // In dev, fetch from BFF so you still start with real data
+    async function load() {
+      const res = await fetch("/api/injected");
+      const data: { message: string } = await res.json();
+      dispatch(setGlobalMessage(data.message));
+    }
+
+    void load();
+  }, [dispatch, message]);
+
   return (
     <>
       <h2>About</h2>
+      <p>{message ?? "Loading..."}</p>
       <p>This project is for frontend system design practice.</p>
     </>
   );
@@ -60,7 +81,7 @@ export function App() {
       <header className="header">
         <h1>Restart</h1>
         <nav className="nav">
-          <Link to="/">Home</Link>
+          <Link className="first" to="/">Home</Link>
           <Link to="/about">About</Link>
         </nav>
       </header>

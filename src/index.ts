@@ -2,6 +2,9 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getPort } from "./env.js";
+import fs from "fs/promises";
+import { buildRequestContext } from "./server/requestContext.js";
+import { getBootstrapPayload } from "./server/bootstrap.js";
 
 const app = express();
 const port = getPort();
@@ -11,6 +14,30 @@ const __dirname = path.dirname(__filename);
 
 const projectRoot = path.join(__dirname, "..");
 const staticDir = path.join(projectRoot, "static");
+
+function safeSerializeForHtml(obj: unknown): string {
+  return JSON.stringify(obj).replace(/</g, "\\u003c");
+}
+
+async function readIndexHtml(staticDir: string): Promise<string> {
+  return fs.readFile(path.join(staticDir, "index.html"), "utf-8");
+}
+
+async function sendIndexWithBootstrap(
+  res: express.Response,
+  staticDir: string,
+  payload: unknown,
+) {
+  const html = await readIndexHtml(staticDir);
+
+  const injected = `<script>window.__BOOTSTRAP__=${safeSerializeForHtml(payload)};</script>`;
+
+  const output = html.includes("</head>")
+    ? html.replace("</head>", `${injected}</head>`)
+    : html.replace("</body>", `${injected}</body>`);
+
+  res.status(200).type("html").send(output);
+}
 
 app.use((req, res, next) => {
   const start = process.hrtime.bigint();
@@ -32,6 +59,7 @@ app.use((req, res, next) => {
 
 app.use(
   express.static(staticDir, {
+    index: false,
     setHeaders(res, filePath) {
       const filename = path.basename(filePath);
 
@@ -53,9 +81,25 @@ app.use(
   }),
 );
 
+app.get("/api/bootstrap", async (req, res) => {
+  const ctx = buildRequestContext(req);
+
+  // In dev, we allow the client to pass the route it is on
+  // because req.path will be "/api/bootstrap"
+  const payload = await getBootstrapPayload(ctx);
+
+  res.status(200).json(payload);
+});
+
 app.get("/api/hello", (req, res) => {
   res.status(200).json({
-    message: "Hello from the BFF",
+    message: "Hello from the node/express BFF",
+  });
+});
+
+app.get("/api/injected", (req, res) => {
+  res.status(200).json({
+    message: "Hello from injected Redux state (BFF)",
   });
 });
 
@@ -68,14 +112,20 @@ app.get("/health", (req, res) => {
   });
 });
 
-app.get(/.*/, (req, res, next) => {
+app.get(/.*/, async (req, res, next) => {
   if (req.path.startsWith("/api")) return next();
 
   // If the request looks like a file request (has an extension), let it 404
   // Example: /assets/app.123.js or /favicon.ico
   if (path.extname(req.path)) return next();
 
-  res.sendFile(path.join(staticDir, "index.html"));
+  try {
+    const ctx = buildRequestContext(req, req.path);
+    const payload = await getBootstrapPayload(ctx);
+    await sendIndexWithBootstrap(res, staticDir, payload);
+  } catch (e) {
+    next(e);
+  }
 });
 
 app.use((req, res) => {

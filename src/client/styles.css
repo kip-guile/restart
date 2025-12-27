@@ -15,3 +15,7 @@ h1 {
 #app {
   margin: 0;
 }
+
+.first {
+    margin-right: 4px;
+}
