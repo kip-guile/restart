@@ -39,6 +39,9 @@ export function createHttpClient(params: { requestId: string }): HttpClient {
 
         const end = process.hrtime.bigint();
         const durationMs = Number(end - start) / 1_000_000;
+        console.log(
+          `[${params.requestId}] GET ${url} (${durationMs.toFixed(2)}ms)`,
+        );
 
         if (!res.ok) {
           const text = await res.text().catch(() => "");

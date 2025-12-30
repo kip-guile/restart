@@ -4,7 +4,8 @@ import { fileURLToPath } from "url";
 import { getPort } from "./env.js";
 import fs from "fs/promises";
 import { buildRequestContext } from "./server/requestContext.js";
-import { getBootstrapPayload } from "./server/bootstrap.js";
+import { getBootstrapPayload, getTodos } from "./server/bootstrap.js";
+import { createHttpClient } from "./server/httpClient.js";
 
 const app = express();
 const port = getPort();
@@ -82,13 +83,42 @@ app.use(
 );
 
 app.get("/api/bootstrap", async (req, res) => {
-  const ctx = buildRequestContext(req);
+  const route = typeof req.query.path === "string" ? req.query.path : "/";
+  const ctx = buildRequestContext(req, route);
 
   // In dev, we allow the client to pass the route it is on
   // because req.path will be "/api/bootstrap"
   const payload = await getBootstrapPayload(ctx);
 
+  console.log(payload);
+
   res.status(200).json(payload);
+});
+
+app.get("/api/todos", async (req, res) => {
+  const ctx = buildRequestContext(req, "/todos");
+  const http = createHttpClient({ requestId: ctx.requestId });
+
+  try {
+    const todos = await getTodos(http);
+
+    res.status(200).json(
+      todos.map((t) => ({
+        id: t.id,
+        title: t.title,
+        completed: t.completed,
+      })),
+    );
+  } catch (err) {
+    console.error(
+      `[todos] FAIL requestId=${ctx.requestId} userId=${ctx.userId}`,
+      err,
+    );
+    res.status(500).json({
+      code: "TODOS_FAILED",
+      message: "Failed to load todos",
+    });
+  }
 });
 
 app.get("/api/hello", (req, res) => {

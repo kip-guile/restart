@@ -4,17 +4,21 @@ import {
   type PayloadAction,
 } from "@reduxjs/toolkit";
 import { api } from "./api";
+import type { BootstrapPayload } from "../../shared/bootstrap";
 
 type AppState = {
   message: string | null;
+  bootstrap: BootstrapPayload | null;
 };
 
 type AppSliceState = {
   message: string | null;
+  bootstrap: BootstrapPayload | null;
 };
 
 const initialAppState: AppState = {
   message: null,
+  bootstrap: null,
 };
 
 const appSlice = createSlice({
@@ -23,6 +27,9 @@ const appSlice = createSlice({
   reducers: {
     setMessage(state, action: PayloadAction<string>) {
       state.message = action.payload;
+    },
+    setBootstrap(state, action: PayloadAction<BootstrapPayload>) {
+      state.bootstrap = action.payload;
     },
   },
 });
@@ -44,7 +51,7 @@ export function makeStore(preloadedState?: Partial<RootState>) {
   });
 }
 
-export const { setMessage } = appSlice.actions;
+export const { setMessage, setBootstrap } = appSlice.actions;
 
 export type AppStore = ReturnType<typeof makeStore>;
 export type AppDispatch = AppStore["dispatch"];

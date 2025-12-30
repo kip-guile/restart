@@ -1,8 +1,8 @@
 import React from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { Link, Route, Routes } from "react-router-dom";
-import type { RootState, AppDispatch } from "./store/store";
-import { setMessage as setGlobalMessage } from "./store/store";
+import type { RootState } from "./store/store";
+import { useGetTodosQuery } from "./store/api";
 
 function Home() {
     const [message, setMessage] = React.useState<string>("Loading...");
@@ -37,23 +37,59 @@ function Home() {
   );
 }
 
+function Todos() {
+  const bootstrap = useSelector((s: RootState) => s.app.bootstrap);
+
+  if (!bootstrap) return <p>Loading...</p>;
+
+  if (bootstrap.page.kind === "error") {
+    return (
+      <div>
+        <h2>Todos</h2>
+        <p>{bootstrap.page.message}</p>
+      </div>
+    );
+  }
+
+  if (bootstrap.page.kind !== "todos") {
+    return (
+      <div>
+        <h2>Todos</h2>
+        <p>This route is not /todos.</p>
+      </div>
+    );
+  }
+
+  // RTK Query fetch
+  const { data, isLoading, error, refetch } = useGetTodosQuery();
+
+  if (isLoading) return <p>Loading todos...</p>;
+
+  if (error) {
+    return (
+      <div>
+        <p>Failed to load todos.</p>
+        <button onClick={() => refetch()}>Retry</button>
+      </div>
+    );
+  }
+
+  return (
+     <div>
+      <h2>Todos</h2>
+      <ul>
+        {data?.map((t) => (
+          <li key={t.id}>
+            {t.completed ? "✅" : "⬜"} {t.title}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function About() {
-  const dispatch = useDispatch<AppDispatch>();
   const message = useSelector((s: RootState) => s.app.message);
-
-  React.useEffect(() => {
-    // In prod, message can already exist from injected state, so do nothing
-    if (message) return;
-
-    // In dev, fetch from BFF so you still start with real data
-    async function load() {
-      const res = await fetch("/api/injected");
-      const data: { message: string } = await res.json();
-      dispatch(setGlobalMessage(data.message));
-    }
-
-    void load();
-  }, [dispatch, message]);
 
   return (
     <>
@@ -82,7 +118,8 @@ export function App() {
         <h1>Restart</h1>
         <nav className="nav">
           <Link className="first" to="/">Home</Link>
-          <Link to="/about">About</Link>
+          <Link className="first" to="/about">About</Link>
+          <Link to="/todos">Todos</Link>
         </nav>
       </header>
 
@@ -90,6 +127,7 @@ export function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
+          <Route path="/todos" element={<Todos />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </section>
