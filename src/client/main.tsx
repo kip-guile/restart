@@ -2,9 +2,9 @@ import React from "react";
 import { createRoot, hydrateRoot } from "react-dom/client";
 import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
-import { makeStore } from "./store/store";
-import { App } from "./App";
-import { applyBootstrapToStore, readBootstrapFromWindow, getBootstrap } from "./bootstrap";
+import { makeStore } from "../app/store/store.js";
+import { App } from "../app/App.js";
+import { applyBootstrapToStore, readBootstrapFromWindow, getBootstrap, seedRtkQueryFromBootstrap } from "./bootstrap.js";
 import "./styles.css";
 
 async function start() {
@@ -16,8 +16,10 @@ async function start() {
   const store = makeStore();
 
   const injected = readBootstrapFromWindow();
+
   const payload = injected ?? (await getBootstrap(window.location.pathname));
   applyBootstrapToStore(payload, store.dispatch);
+  seedRtkQueryFromBootstrap(store, payload);
 
   const app = (<React.StrictMode>
       <Provider store={store}>

@@ -6,6 +6,7 @@ import fs from "fs/promises";
 import { buildRequestContext } from "./server/requestContext.js";
 import { getBootstrapPayload, getTodos } from "./server/bootstrap.js";
 import { createHttpClient } from "./server/httpClient.js";
+import { renderHtml } from "./server/ssr/render.js";
 
 const app = express();
 const port = getPort();
@@ -22,6 +23,15 @@ function safeSerializeForHtml(obj: unknown): string {
 
 async function readIndexHtml(staticDir: string): Promise<string> {
   return fs.readFile(path.join(staticDir, "index.html"), "utf-8");
+}
+
+async function findClientBundleSrc(): Promise<string> {
+  const assetsDir = path.join(staticDir, "assets");
+  const files = await fs.readdir(assetsDir);
+  const appFile = files.find((f) => f.startsWith("app.") && f.endsWith(".js"));
+  if (!appFile)
+    throw new Error("Could not find built app bundle in static/assets");
+  return `/assets/${appFile}`;
 }
 
 async function sendIndexWithBootstrap(
@@ -142,21 +152,54 @@ app.get("/health", (req, res) => {
   });
 });
 
+// server/index.ts
 app.get(/.*/, async (req, res, next) => {
   if (req.path.startsWith("/api")) return next();
 
-  // If the request looks like a file request (has an extension), let it 404
-  // Example: /assets/app.123.js or /favicon.ico
+  // Let real file requests 404 (assets, favicon, etc.)
   if (path.extname(req.path)) return next();
 
+  const route = req.path;
+
   try {
-    const ctx = buildRequestContext(req, req.path);
-    const payload = await getBootstrapPayload(ctx);
-    await sendIndexWithBootstrap(res, staticDir, payload);
+    const ctx = buildRequestContext(req, route);
+    const bootstrap = await getBootstrapPayload(ctx);
+
+    // If prod build exists, SSR. If not, fall back to index.html injection.
+    try {
+      const assetScriptSrc = await findClientBundleSrc();
+
+      const html = renderHtml({
+        ctx,
+        bootstrap,
+        assetScriptSrc,
+      });
+
+      res.status(200).type("html").send(html);
+    } catch {
+      // Dev-friendly fallback when no built bundle exists on disk
+      await sendIndexWithBootstrap(res, staticDir, bootstrap);
+    }
   } catch (e) {
     next(e);
   }
 });
+
+// app.get(/.*/, async (req, res, next) => {
+//   if (req.path.startsWith("/api")) return next();
+
+//   // If the request looks like a file request (has an extension), let it 404
+//   // Example: /assets/app.123.js or /favicon.ico
+//   if (path.extname(req.path)) return next();
+
+//   try {
+//     const ctx = buildRequestContext(req, req.path);
+//     const payload = await getBootstrapPayload(ctx);
+//     await sendIndexWithBootstrap(res, staticDir, payload);
+//   } catch (e) {
+//     next(e);
+//   }
+// });
 
 app.use((req, res) => {
   res.status(404).sendFile(path.join(path.join(staticDir, "404.html")));

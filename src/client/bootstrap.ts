@@ -1,5 +1,7 @@
-import type { BootstrapPayload } from "../shared/bootstrap";
-import { setMessage, setBootstrap } from "./store/store";
+import type { BootstrapPayload } from "../shared/bootstrap.js";
+import type { AppStore } from "../app/store/store.js";
+import { setMessage, setBootstrap } from "../app/store/store.js";
+import { api } from "../app/store/api.js";
 
 declare global {
   interface Window {
@@ -72,6 +74,18 @@ export async function getBootstrap(route: string): Promise<BootstrapPayload> {
     // Only hits when the request itself failed or your fetchBootstrap throws.
     return makeClientErrorBootstrap(route, 0);
   }
+}
+
+export function seedRtkQueryFromBootstrap(
+  store: AppStore,
+  payload: BootstrapPayload,
+) {
+  if (payload.page.kind !== "todos") return;
+
+  // Put the todos into RTK Query cache for the getTodos query
+  void store.dispatch(
+    api.util.upsertQueryData("getTodos", undefined, payload.page.todos),
+  );
 }
 
 // Convert bootstrap payload into Redux actions (mapping layer)

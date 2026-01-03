@@ -1,8 +1,8 @@
 import React from "react";
 import { useSelector } from "react-redux";
 import { Link, Route, Routes } from "react-router-dom";
-import type { RootState } from "./store/store";
-import { useGetTodosQuery } from "./store/api";
+import type { RootState } from "./store/store.js";
+import { useGetTodosQuery } from "./store/api.js";
 
 function Home() {
     const [message, setMessage] = React.useState<string>("Loading...");
@@ -15,7 +15,7 @@ function Home() {
         if (!res.ok) {
             throw new Error(`BFF returned ${res.status}`);
         }
-        const data: { message: string } = await res.json();
+        const data = (await res.json()) as { message: string };
         setMessage(data.message);
         } catch (e) {
         setError(e instanceof Error ? e.message : "Unknown error");

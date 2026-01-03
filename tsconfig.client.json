@@ -8,5 +8,5 @@
 
     "noEmit": true,
   },
-  "include": ["src/client/**/*.ts", "src/client/**/*.tsx"]
+  "include": ["src/client/**/*.ts", "src/client/**/*.tsx", "src/app/**/*.ts", "src/app/**/*.tsx", "src/shared/**/*.ts"]
 }

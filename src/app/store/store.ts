@@ -3,8 +3,8 @@ import {
   createSlice,
   type PayloadAction,
 } from "@reduxjs/toolkit";
-import { api } from "./api";
-import type { BootstrapPayload } from "../../shared/bootstrap";
+import { api } from "./api.js";
+import type { BootstrapPayload } from "../../shared/bootstrap.js";
 
 type AppState = {
   message: string | null;
