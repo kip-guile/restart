@@ -1,13 +1,25 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM"],
     "jsx": "react-jsx",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    "types": ["node"],
+    "composite": true,
+    "verbatimModuleSyntax": true
   },
-  "include": ["src/server/**/*.ts", "src/server/**/*.tsx", "src/app/**/*.ts", "src/app/**/*.tsx", "src/shared/**/*.ts", "src/index.ts"],
-  "exclude": ["src/client/**"]
+  "include": [
+    "src/server/**/*.ts",
+    "src/server/**/*.tsx",
+    "src/shared/**/*.ts",
+    "src/shared/**/*.tsx",
+    "src/app/**/*.ts",
+    "src/app/**/*.tsx",
+    "src/client/bootstrap.ts",
+    "src/index.ts",
+    "src/env.ts"
+  ]
 }

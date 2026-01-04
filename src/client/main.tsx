@@ -1,41 +1,48 @@
-import React from "react";
-import { createRoot, hydrateRoot } from "react-dom/client";
-import { Provider } from "react-redux";
-import { BrowserRouter } from "react-router-dom";
-import { makeStore } from "../app/store/store.js";
-import { App } from "../app/App.js";
-import { applyBootstrapToStore, readBootstrapFromWindow, getBootstrap, seedRtkQueryFromBootstrap } from "./bootstrap.js";
-import "./styles.css";
+import React from 'react'
+import { createRoot, hydrateRoot } from 'react-dom/client'
+import { Provider } from 'react-redux'
+import { BrowserRouter } from 'react-router-dom'
+import { makeStore } from '../app/store/store'
+import { App } from '../app/App'
+import {
+  applyBootstrapToStore,
+  readBootstrapFromWindow,
+  getBootstrap,
+  seedRtkQueryFromBootstrap,
+} from './bootstrap'
+import './styles.css'
 
 async function start() {
-  const rootEl = document.getElementById("root");
+  const rootEl = document.getElementById('root')
   if (!rootEl) {
-    throw new Error("Missing #root element");
+    throw new Error('Missing #root element')
   }
 
-  const store = makeStore();
+  const store = makeStore()
 
-  const injected = readBootstrapFromWindow();
+  const injected = readBootstrapFromWindow()
 
-  const payload = injected ?? (await getBootstrap(window.location.pathname));
-  applyBootstrapToStore(payload, store.dispatch);
-  seedRtkQueryFromBootstrap(store, payload);
+  const payload = injected ?? (await getBootstrap(window.location.pathname))
+  applyBootstrapToStore(payload, store.dispatch)
+  seedRtkQueryFromBootstrap(store, payload)
 
-  const app = (<React.StrictMode>
+  const app = (
+    <React.StrictMode>
       <Provider store={store}>
         <BrowserRouter>
           <App />
         </BrowserRouter>
       </Provider>
-    </React.StrictMode>)
+    </React.StrictMode>
+  )
 
-  const hasServerMarkup = rootEl.childNodes.length > 0;
+  const hasServerMarkup = rootEl.childNodes.length > 0
 
   if (hasServerMarkup) {
-    hydrateRoot(rootEl, app);
+    hydrateRoot(rootEl, app)
   } else {
-    createRoot(rootEl).render(app);
+    createRoot(rootEl).render(app)
   }
 }
 
-void start();
+void start()

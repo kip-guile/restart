@@ -3,6 +3,7 @@ import { useSelector } from "react-redux";
 import { Link, Route, Routes } from "react-router-dom";
 import type { RootState } from "./store/store.js";
 import { useGetTodosQuery } from "./store/api.js";
+import type { Todo } from "../shared/bootstrap.js"
 
 function Home() {
     const [message, setMessage] = React.useState<string>("Loading...");
@@ -51,15 +52,6 @@ function Todos() {
     );
   }
 
-  if (bootstrap.page.kind !== "todos") {
-    return (
-      <div>
-        <h2>Todos</h2>
-        <p>This route is not /todos.</p>
-      </div>
-    );
-  }
-
   // RTK Query fetch
   const { data, isLoading, error, refetch } = useGetTodosQuery();
 
@@ -78,7 +70,7 @@ function Todos() {
      <div>
       <h2>Todos</h2>
       <ul>
-        {data?.map((t) => (
+        {data?.map((t: Todo) => (
           <li key={t.id}>
             {t.completed ? "✅" : "⬜"} {t.title}
           </li>

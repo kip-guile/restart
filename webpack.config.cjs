@@ -1,4 +1,6 @@
 const path = require("path");
+const fs = require("fs");
+const webpack = require("webpack");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 
 const { BundleAnalyzerPlugin } = require("webpack-bundle-analyzer");
@@ -56,7 +58,21 @@ module.exports = (_env, argv) => {
                 filename: "assets/[name].[contenthash].css"
             })
             ]
-        : [])
+        : []),
+        new webpack.NormalModuleReplacementPlugin(/\.js$/, (resource) => {
+        try {
+          const req = resource.request;
+          if (!req) return;
+          if (req.startsWith("./") || req.startsWith("../")) {
+            const tsPath = path.resolve(resource.context, req.replace(/\.js$/, ".ts"));
+            const tsxPath = path.resolve(resource.context, req.replace(/\.js$/, ".tsx"));
+            if (fs.existsSync(tsPath)) resource.request = req.replace(/\.js$/, ".ts");
+            else if (fs.existsSync(tsxPath)) resource.request = req.replace(/\.js$/, ".tsx");
+          }
+        } catch {
+          // noop
+        }
+      }),
     ],
 
     devtool: isProd ? false : "source-map", // source maps in dev, none in prod.
