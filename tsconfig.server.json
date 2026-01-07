@@ -12,14 +12,13 @@
     "verbatimModuleSyntax": true
   },
   "include": [
+    "src/index.ts",
     "src/server/**/*.ts",
     "src/server/**/*.tsx",
     "src/shared/**/*.ts",
     "src/shared/**/*.tsx",
     "src/app/**/*.ts",
-    "src/app/**/*.tsx",
-    "src/client/bootstrap.ts",
-    "src/index.ts",
-    "src/env.ts"
-  ]
+    "src/app/**/*.tsx"
+  ],
+  "exclude": ["src/client/**"]
 }

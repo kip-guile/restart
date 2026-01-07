@@ -5,11 +5,11 @@ import { BrowserRouter } from 'react-router-dom'
 import { makeStore } from '../app/store/store'
 import { App } from '../app/App'
 import {
-  applyBootstrapToStore,
   readBootstrapFromWindow,
   getBootstrap,
   seedRtkQueryFromBootstrap,
 } from './bootstrap'
+import { applyBootstrapToStore } from '../app/bootstrap/applyBootstrapToStore'
 import './styles.css'
 
 async function start() {

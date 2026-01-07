@@ -5,6 +5,7 @@
     "jsx": "react-jsx", // enables the new JSX transform
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
 
     "noEmit": true,
   },

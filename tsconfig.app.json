@@ -13,8 +13,9 @@
     "emitDeclarationOnly": true,
     "declarationMap": true,
     "outDir": "dist-types/app",
+    "allowImportingTsExtensions": true,
 
     "types": []
   },
-  "include": ["src/app/**/*.ts", "src/app/**/*.tsx", "src/shared/**/*.ts", "src/shared/**/*.tsx"]
+  "include": ["src/app/**/*.ts", "src/app/**/*.tsx", "src/shared/**/*.ts", "src/shared/**/*.tsx", "src/app/pages/*.tsx", "src/app/pages/*.ts"]
 }

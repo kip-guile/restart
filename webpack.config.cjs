@@ -18,6 +18,7 @@ module.exports = (_env, argv) => {
     output: { // where built files go. We output straight into static/ folder so Express can serve them.
       path: path.resolve(__dirname, "static"),
       filename: "assets/[name].[contenthash].js", // this creates hashed assets. Example assets/app.3f2a91c0.js.
+      chunkFilename: "assets/[name].[contenthash].js", // for code-split chunks.
       publicPath: "/",
       clean: isProd // production build cleans old hashed files so they do not pile up.
     },

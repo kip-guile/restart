@@ -1,0 +1,10 @@
+node_modules
+dist
+static/assets
+.cache
+.DS_Store
+.git
+.gitignore
+npm-debug.log
+yarn.lock
+pnpm-lock.yaml

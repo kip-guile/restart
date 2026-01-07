@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
-import { getPort } from "./env.js";
+import { getPort } from "./server/env.js";
 import fs from "fs/promises";
 import { buildRequestContext } from "./server/requestContext.js";
 import { getBootstrapPayload, getTodos } from "./server/bootstrap.js";

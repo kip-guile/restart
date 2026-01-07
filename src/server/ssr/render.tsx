@@ -8,7 +8,7 @@ import { StaticRouter } from "react-router";
 import type { RequestContext } from "../requestContext.js";
 import type { BootstrapPayload } from "../../shared/bootstrap.js";
 import { makeStore } from "../../app/store/store.js";
-import { applyBootstrapToStore } from "../../client/bootstrap.js";
+import { applyBootstrapToStore } from "../../app/bootstrap/applyBootstrapToStore.js";
 import {App} from "../../app/App.js";
 import { api } from "../../app/store/api.js";
 
