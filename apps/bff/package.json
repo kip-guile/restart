@@ -1,0 +1,26 @@
+{
+  "name": "@restart/bff",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.server.json",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-redux": "^9.2.0",
+    "react-router-dom": "^7.11.0",
+    "@restart/ui": "file:../../packages/ui",
+    "@restart/shared": "file:../../packages/shared"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.0.3"
+  }
+}

@@ -4,7 +4,7 @@ import {
   type PayloadAction,
 } from "@reduxjs/toolkit";
 import { api } from "./api.js";
-import type { BootstrapPayload } from "../../shared/bootstrap.js";
+import type { BootstrapPayload } from "@restart/shared";
 
 type AppState = {
   message: string | null;

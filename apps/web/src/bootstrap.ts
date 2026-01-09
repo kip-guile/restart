@@ -1,6 +1,6 @@
-import type { BootstrapPayload } from "../shared/bootstrap.js";
-import type { AppStore } from "../app/store/store.js";
-import { api } from "../app/store/api.js";
+import type { BootstrapPayload } from "../../../packages/shared/src/bootstrap.js";
+import type { AppStore } from "../../../packages/ui/src/store/store.js";
+import { api } from "../../../packages/ui/src/store/api.js";
 
 declare global {
   interface Window {

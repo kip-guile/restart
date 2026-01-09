@@ -1,5 +1,5 @@
 import { setMessage, setBootstrap } from "../store/store.js";
-import type { BootstrapPayload } from "../../shared/bootstrap.js";
+import type { BootstrapPayload } from "@restart/shared";
 
 // Convert bootstrap payload into Redux actions (mapping layer)
 export function applyBootstrapToStore(

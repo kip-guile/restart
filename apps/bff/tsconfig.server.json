@@ -1,5 +1,5 @@
 {
-  "extends": "./tsconfig.base.json",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2022", "DOM"],
     "jsx": "react-jsx",
@@ -20,5 +20,6 @@
     "src/app/**/*.ts",
     "src/app/**/*.tsx"
   ],
-  "exclude": ["src/client/**"]
+  "exclude": ["src/client/**"],
+  "references": [{ "path": "../../packages/shared" }, { "path": "../../packages/ui" }]
 }

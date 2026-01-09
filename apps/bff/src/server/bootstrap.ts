@@ -1,5 +1,5 @@
 import type { RequestContext } from "./requestContext.js";
-import type { BootstrapPayload } from "../shared/bootstrap.js";
+import type { BootstrapPayload } from "@restart/shared";
 import { createHttpClient } from "./httpClient.js";
 import { TTLCache } from "./cache.js";
 

@@ -12,11 +12,11 @@ module.exports = (_env, argv) => {
 
   return {
     entry: { // the starting file. Webpack walks imports from here.
-      app: path.resolve(__dirname, "src/client/main.tsx")
+      app: path.resolve(__dirname, "src/main.tsx")
     },
 
     output: { // where built files go. We output straight into static/ folder so Express can serve them.
-      path: path.resolve(__dirname, "static"),
+      path: path.resolve(__dirname, "../bff/static"),
       filename: "assets/[name].[contenthash].js", // this creates hashed assets. Example assets/app.3f2a91c0.js.
       chunkFilename: "assets/[name].[contenthash].js", // for code-split chunks.
       publicPath: "/",
@@ -34,7 +34,6 @@ module.exports = (_env, argv) => {
           use: {
             loader: "ts-loader", // converts TypeScript to JS for bundling.
             options: {
-            configFile: "tsconfig.client.json", // points to the client-specific tsconfig.
             transpileOnly: true // enables type checking during the build.
             },
           },
@@ -49,7 +48,7 @@ module.exports = (_env, argv) => {
 
     plugins: [
       new HtmlWebpackPlugin({ // takes template HTML and writes static/index.html with the correct script tag injected.
-        template: path.resolve(__dirname, "src/client/index.html"),
+        template: path.resolve(__dirname, "src/index.html"),
         filename: "index.html"
       }),
     ...(process.env.ANALYZE === "true" ? [new BundleAnalyzerPlugin()] : []), // conditionally add bundle analyzer plugin based on env var

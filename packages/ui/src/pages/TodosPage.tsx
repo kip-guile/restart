@@ -2,7 +2,7 @@ import React from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../store/store.js";
 import { useGetTodosQuery } from "../store/api.js";
-import type { Todo } from "../../shared/bootstrap.js"
+import type { Todo } from "@restart/shared";
 
 export default function Todos() {
   const bootstrap = useSelector((s: RootState) => s.app.bootstrap);

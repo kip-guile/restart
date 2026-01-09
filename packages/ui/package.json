@@ -1,0 +1,30 @@
+{
+  "name": "@restart/ui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.11.2",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-redux": "^9.2.0",
+    "react-router-dom": "^7.11.0",
+    "@restart/shared": "file:../shared"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3"
+  }
+}
