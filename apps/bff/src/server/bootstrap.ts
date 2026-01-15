@@ -15,10 +15,21 @@ type ExternalTodo = {
   completed: boolean;
 };
 
-const bootstrapCache = new TTLCache<BootstrapPayload>(15_000);
+const publicBootstrapCache = new TTLCache<BootstrapPayload>(15_000);
+const privateBootstrapCache = new TTLCache<BootstrapPayload>(15_000);
 
-function makeCacheKey(ctx: RequestContext): string {
-  return `${ctx.userId}:${ctx.route}`;
+function makePublicKey(ctx: RequestContext): string {
+  return `route=${ctx.route}`;
+}
+
+function makePrivateKey(ctx: RequestContext): string {
+  if (!ctx.isAuthenticated) return `anon:${ctx.route}`;
+  return `user=${ctx.userId}:${ctx.route}`;
+}
+
+function isBootstrapPublic(_ctx: RequestContext): boolean {
+  // With your current greeting, it is always private
+  return false;
 }
 
 export async function getUserName(
@@ -43,19 +54,23 @@ export async function getTodos(
 export async function getBootstrapPayload(
   ctx: RequestContext,
 ): Promise<BootstrapPayload> {
-  const key = makeCacheKey(ctx);
+  const cache = isBootstrapPublic(ctx) ? publicBootstrapCache : privateBootstrapCache;
+  const key = isBootstrapPublic(ctx) ? makePublicKey(ctx) : makePrivateKey(ctx);
 
-  const cached = bootstrapCache.get(key);
+  const cached = cache.get(key);
   if (cached) {
     console.log(`[bootstrap] cache HIT ${key}`);
     return cached;
   }
 
+
   const http = createHttpClient({ requestId: ctx.requestId });
 
   try {
     // Route-specific bootstrapping
-    const userName = await getUserName(http);
+    const userName = ctx.isAuthenticated ? await getUserName(http) : null;
+
+    const greeting = userName ? `Welcome back, ${userName}` : "Welcome";
 
     let payload: BootstrapPayload;
 
@@ -63,7 +78,7 @@ export async function getBootstrapPayload(
       const todos = await getTodos(http);
       payload = {
         route: ctx.route,
-        greeting: `Welcome back, ${userName}`,
+        greeting,
         page: {
           kind: "todos",
           todos: todos.map((t) => ({
@@ -76,13 +91,13 @@ export async function getBootstrapPayload(
     } else {
       payload = {
         route: ctx.route,
-        greeting: `Welcome back, ${userName}`,
+        greeting,
         page: { kind: "home" },
       };
     }
     console.log(`[bootstrap] cache MISS ${key}`);
 
-    bootstrapCache.set(key, payload);
+    cache.set(key, payload);
     return payload;
   } catch (err) {
     console.error(

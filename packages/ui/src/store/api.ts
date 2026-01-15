@@ -3,19 +3,18 @@ import type { Todo } from "@restart/shared";
 
 type HelloResponse = { message: string };
 
-export const api = createApi({
-  reducerPath: "api",
-  baseQuery: fetchBaseQuery({
-    baseUrl: "/api",
-  }),
-  endpoints: (builder) => ({
-    hello: builder.query<HelloResponse, void>({
-      query: () => "hello",
+export function createApiSlice(baseUrl: string) {
+  return createApi({
+    reducerPath: "api",
+    baseQuery: fetchBaseQuery({ baseUrl }),
+    endpoints: (builder) => ({
+      hello: builder.query<HelloResponse, void>({
+        query: () => "hello",
+      }),
+      getTodos: builder.query<Todo[], void>({
+        // IMPORTANT: keep it relative to baseUrl
+        query: () => "todos",
+      }),
     }),
-    getTodos: builder.query<Todo[], void>({
-      query: () => "/todos",
-    }),
-  }),
-});
-
-export const { useHelloQuery, useGetTodosQuery } = api;
+  });
+}

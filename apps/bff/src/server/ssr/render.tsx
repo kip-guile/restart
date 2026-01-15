@@ -75,13 +75,16 @@ export async function renderHtml(opts: {
     `<div id="root">${appHtml}</div>`,
   );
 
+  const preloadedState = store.getState();
+
   // 6) Inject bootstrap state for hydration to reuse
   const bootstrapJson = escapeJsonForHtml(opts.bootstrap);
   const injectedBootstrap = `<script>window.__BOOTSTRAP__=${bootstrapJson};</script>`;
+  const preloadedStateScript = `<script>window.__PRELOADED_STATE__=${escapeJsonForHtml(preloadedState)};</script>`;
 
   const withBootstrap = withRoot.includes("</head>")
-    ? withRoot.replace("</head>", `${injectedBootstrap}</head>`)
-    : withRoot.replace("</body>", `${injectedBootstrap}</body>`);
+    ? withRoot.replace("</head>", `${injectedBootstrap}\n${preloadedStateScript}\n</head>`)
+    : withRoot.replace("</body>", `${injectedBootstrap}\n${preloadedStateScript}\n</body>`);
 
   return withBootstrap;
 }

@@ -3,12 +3,18 @@ const fs = require("fs");
 const webpack = require("webpack");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 
-const { BundleAnalyzerPlugin } = require("webpack-bundle-analyzer");
+let BundleAnalyzerPlugin;
+if (process.env.ANALYZE === "true") {
+  ({ BundleAnalyzerPlugin } = require("webpack-bundle-analyzer"));
+}
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
 
 module.exports = (_env, argv) => {
   const isProd = argv.mode === "production";
+  const apiTarget = process.env.DOCKER === "true"
+  ? "http://bff:3000"
+  : "http://localhost:3000";
 
   return {
     entry: { // the starting file. Webpack walks imports from here.
@@ -34,6 +40,7 @@ module.exports = (_env, argv) => {
           use: {
             loader: "ts-loader", // converts TypeScript to JS for bundling.
             options: {
+            configFile: path.resolve(__dirname, "tsconfig.client.json"),
             transpileOnly: true // enables type checking during the build.
             },
           },
@@ -78,9 +85,10 @@ module.exports = (_env, argv) => {
     devtool: isProd ? false : "source-map", // source maps in dev, none in prod.
 
     devServer: { // dev server for local development.
+      host: "0.0.0.0",
       port: 8080,
       hot: true,
-      open: true,
+      open: false,
       historyApiFallback: true,
     //   static: {
     //     directory: path.resolve(__dirname, "static") // serves files that are actually on disk (like 404.html for now)
@@ -90,7 +98,7 @@ module.exports = (_env, argv) => {
         proxy: [
             {
                 context: ["/api"],
-                target: "http://localhost:3000",
+                target: apiTarget,
                 changeOrigin: true
             }
         ]

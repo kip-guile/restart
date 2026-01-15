@@ -1,9 +1,10 @@
 import {
   configureStore,
   createSlice,
+  combineReducers,
   type PayloadAction,
 } from "@reduxjs/toolkit";
-import { api } from "./api.js";
+import { createApiSlice } from "./api.js";
 import type { BootstrapPayload } from "@restart/shared";
 
 type AppState = {
@@ -34,24 +35,27 @@ const appSlice = createSlice({
   },
 });
 
-const rootReducer = {
-  app: appSlice.reducer,
-  [api.reducerPath]: api.reducer,
-};
-
-export type RootState = {
-  app: AppSliceState;
-};
-
-export function makeStore(preloadedState?: Partial<RootState>) {
-  return configureStore({
-    reducer: rootReducer,
-    middleware: (gDM) => gDM().concat(api.middleware),
-    preloadedState: preloadedState as RootState | undefined,
+export function makeStore(opts: {
+  apiBaseUrl: string;
+  preloadedState?: unknown;
+}) {
+  const api = createApiSlice(opts.apiBaseUrl);
+  const rootReducer = combineReducers({
+    app: appSlice.reducer,
+    [api.reducerPath]: api.reducer,
   });
+
+  const store = configureStore({
+    reducer: rootReducer,
+    middleware: (getDefault) => getDefault().concat(api.middleware),
+    preloadedState: opts.preloadedState as any,
+    devTools: process.env.NODE_ENV !== "production",
+  });
+  return { store, api };
 }
 
 export const { setMessage, setBootstrap } = appSlice.actions;
 
 export type AppStore = ReturnType<typeof makeStore>;
-export type AppDispatch = AppStore["dispatch"];
+export type RootState = ReturnType<AppStore["store"]["getState"]>;
+export type AppDispatch = AppStore["store"]["dispatch"];

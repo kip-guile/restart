@@ -1,9 +1,11 @@
 import type express from "express";
 import crypto from "crypto";
+import { isAuthenticated } from "../http/auth";
 
 export type RequestContext = {
   requestId: string;
   userId: string;
+  isAuthenticated: boolean;
   route: string;
 };
 
@@ -24,5 +26,6 @@ export function buildRequestContext(
     requestId: crypto.randomUUID(),
     userId: getOrCreateUserId(req),
     route: routeOverride ?? req.path,
+    isAuthenticated: isAuthenticated(req),
   };
 }

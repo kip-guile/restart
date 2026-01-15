@@ -3,8 +3,8 @@ import { createRoot, hydrateRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { Provider } from "react-redux";
 
-import { App, makeStore, applyBootstrapToStore } from "@restart/ui";
-import { readBootstrapFromWindow, getBootstrap, seedRtkQueryFromBootstrap } from "./bootstrap";
+import { App, makeStore, applyBootstrapToStore, RootState } from "@restart/ui";
+import { readBootstrapFromWindow, getBootstrap, seedRtkQueryFromBootstrap, readPreloadedStateFromWindow } from "./bootstrap";
 
 import "./styles.css";
 
@@ -12,13 +12,14 @@ async function start() {
   const rootEl = document.getElementById("root");
   if (!rootEl) throw new Error("Missing #root element");
 
-  const store = makeStore();
+  const preloadedState = readPreloadedStateFromWindow() as Partial<RootState> | undefined;
+  const store = makeStore(preloadedState);
 
   const injected = readBootstrapFromWindow();
   const payload = injected ?? (await getBootstrap(window.location.pathname));
 
   applyBootstrapToStore(payload, store.dispatch);
-  seedRtkQueryFromBootstrap(store, payload);
+  seedRtkQueryFromBootstrap(store, payload, store.getState().api);
 
   const app = (
     <React.StrictMode>

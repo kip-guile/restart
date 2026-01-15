@@ -1,10 +1,12 @@
 import type { BootstrapPayload } from "../../../packages/shared/src/bootstrap.js";
 import type { AppStore } from "../../../packages/ui/src/store/store.js";
-import { api } from "../../../packages/ui/src/store/api.js";
+import { RootState } from "@restart/ui";
+import type { EnhancedStore } from "@reduxjs/toolkit";
 
 declare global {
   interface Window {
     __BOOTSTRAP__?: unknown;
+    __PRELOADED_STATE__?: unknown;
   }
 }
 
@@ -17,6 +19,17 @@ export function readBootstrapFromWindow(): BootstrapPayload | null {
   if (!("route" in raw) || !("page" in raw)) return null;
 
   return raw as BootstrapPayload;
+}
+
+export function readPreloadedStateFromWindow(): unknown | null {
+  const raw = window.__PRELOADED_STATE__;
+  if (!raw) return null;
+
+  delete window.__PRELOADED_STATE__;
+  if (typeof raw !== "object" || raw === null) return null;
+  if (!("route" in raw) || !("page" in raw)) return null;
+
+  return raw as Partial<RootState>;
 }
 
 export async function fetchBootstrap(route: string): Promise<BootstrapPayload> {
@@ -76,8 +89,9 @@ export async function getBootstrap(route: string): Promise<BootstrapPayload> {
 }
 
 export function seedRtkQueryFromBootstrap(
-  store: AppStore,
+  store: EnhancedStore,
   payload: BootstrapPayload,
+  api: any
 ) {
   if (payload.page.kind !== "todos") return;
 

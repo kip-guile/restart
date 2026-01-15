@@ -7,22 +7,23 @@
     "build": "webpack --mode production"
   },
   "dependencies": {
+    "@restart/shared": "file:../../packages/shared",
+    "@restart/ui": "file:../../packages/ui",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "react-router-dom": "^7.11.0",
     "react-redux": "^9.2.0",
-    "@restart/ui": "file:../../packages/ui",
-    "@restart/shared": "file:../../packages/shared"
+    "react-router-dom": "^7.11.0"
   },
   "devDependencies": {
-    "webpack": "^5.104.1",
-    "webpack-cli": "^6.0.1",
-    "webpack-dev-server": "^5.2.2",
+    "css-loader": "^7.1.2",
     "html-webpack-plugin": "^5.6.5",
+    "mini-css-extract-plugin": "^2.9.4",
+    "style-loader": "^4.0.0",
     "ts-loader": "^9.5.4",
     "typescript": "^5.9.3",
-    "css-loader": "^7.1.2",
-    "style-loader": "^4.0.0",
-    "mini-css-extract-plugin": "^2.9.4"
+    "webpack": "^5.104.1",
+    "webpack-bundle-analyzer": "^5.1.1",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2"
   }
 }

@@ -8,6 +8,8 @@ import { buildRequestContext } from "./server/requestContext.js";
 import { getBootstrapPayload, getTodos } from "./server/bootstrap.js";
 import { createHttpClient } from "./server/httpClient.js";
 import { renderHtml } from "./server/ssr/render.js";
+import { TTLCache } from "./server/cache.js";
+import { applyCachePolicy } from "./http/cachePolicy.js";
 
 const app = express();
 const port = getPort();
@@ -86,16 +88,19 @@ app.use(
       // Do not cache HTML entry points
       if (filename === "index.html" || filename === "404.html") {
         res.setHeader("Cache-Control", "no-store");
+        res.setHeader("Vary", "Accept-Encoding");
         return;
       }
 
       // Cache hashed assets aggressively
       if (filePath.includes(`${path.sep}assets${path.sep}`)) {
         res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        res.setHeader("Vary", "Accept-Encoding");
         return;
       }
 
       res.setHeader("Cache-Control", "public, max-age=3600");
+      res.setHeader("Vary", "Accept-Encoding");
     },
   }),
 );
@@ -105,13 +110,18 @@ app.get("/api/bootstrap", async (req, res) => {
   const route = typeof req.query.path === "string" ? req.query.path : "/";
   const ctx = buildRequestContext(req, route);
 
+  // Mode is "bootstrap": public cache for anonymous, private no-store for authed.
+  applyCachePolicy(req, res, "bootstrap");
   const payload = await getBootstrapPayload(ctx);
   res.status(200).json(payload);
 });
 
 app.get("/api/todos", async (req, res) => {
+
   const ctx = buildRequestContext(req, "/todos");
   const http = createHttpClient({ requestId: ctx.requestId });
+  // Mode is "data": public cache for anonymous, private no-store for authed.
+  applyCachePolicy(req, res, "data");
 
   try {
     const todos = await getTodos(http);
@@ -164,12 +174,20 @@ app.get(/.*/, async (req, res, next) => {
 
     const assetScriptSrc = await findClientBundleSrc();
 
+    // HTML cache: public for anonymous (only safe now that bootstrap is non-personal for anon),
+    // private no-store for authed.
+    applyCachePolicy(req, res, "html");
+    
     const html = await renderHtml({
       ctx,
       bootstrap,
       assetScriptSrc,
     });
 
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    // SSR HTML includes personalized bootstrap, so do not allow shared caches.
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader("Vary", "Accept-Encoding");
     res.status(200).type("html").send(html);
   } catch (e) {
     next(e);
