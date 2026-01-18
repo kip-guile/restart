@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunk_restart_web=self.webpackChunk_restart_web||[]).push([[935],{935(e,r,s){s.r(r),s.d(r,{default:()=>h});var t=s(85),n=s(32);function h(){return(0,t.jsxs)(t.Fragment,{children:[(0,t.jsx)("h2",{children:"Not found"}),(0,t.jsx)("p",{children:(0,t.jsx)(n.N_,{to:"/",children:"Go home"})})]})}}}]);

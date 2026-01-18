@@ -15,6 +15,7 @@
     "src/index.ts",
     "src/server/**/*.ts",
     "src/server/**/*.tsx",
+    "src/http/**/*.ts",
     "src/shared/**/*.ts",
     "src/shared/**/*.tsx",
     "src/app/**/*.ts",

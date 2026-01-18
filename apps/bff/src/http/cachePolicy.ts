@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { isAuthenticated } from "./auth";
+import { isAuthenticated } from "./auth.js";
 
 type CacheMode = "html" | "bootstrap" | "data" | "static";
 

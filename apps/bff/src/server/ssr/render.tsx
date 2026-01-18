@@ -13,11 +13,15 @@ import {
   App,
   makeStore,
   applyBootstrapToStore,
-  api,
 } from "@restart/ui";
 
 function escapeJsonForHtml(json: unknown) {
-  return JSON.stringify(json).replace(/</g, "\\u003c");
+  return JSON.stringify(json)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+    .replace(/'/g, "\\u0027")
+    .replace(/"/g, "\\u0022");
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -42,7 +46,7 @@ export async function renderHtml(opts: {
   bootstrap: BootstrapPayload;
   assetScriptSrc: string;
 }): Promise<string> {
-  const store = makeStore();
+  const { store, api } = makeStore({ apiBaseUrl: "/api" });
 
   // 1) Put bootstrap into Redux (shared mapping logic)
   applyBootstrapToStore(opts.bootstrap, store.dispatch);

@@ -13,6 +13,7 @@ dist/
 # =========================
 static/assets/
 static/index.html
+static/manifest.json
 
 # If later you decide to let webpack also build 404.html,
 # uncomment the next line:

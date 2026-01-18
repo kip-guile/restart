@@ -1,21 +1,29 @@
 import type express from "express";
 import crypto from "crypto";
-import { isAuthenticated } from "../http/auth";
+import { isAuthenticated } from "../http/auth.js";
 
 export type RequestContext = {
   requestId: string;
-  userId: string;
+  userId: string | null;
   isAuthenticated: boolean;
   route: string;
 };
 
-function getOrCreateUserId(req: express.Request): string {
-  const header = req.header("x-user-id");
-  if (header && header.trim()) return header.trim();
-
-  // Anonymous stable id per request for now
-  // Later you can derive this from a real auth session
-  return crypto.randomUUID();
+function getOrCreateUserId(req: express.Request): string | null {
+  // Only trust authenticated sessions, not arbitrary headers
+  // For anonymous users, return null (use public cache only)
+  if (isAuthenticated(req)) {
+    // In a real app, extract userId from session/JWT
+    // For now, use a cookie-based stable identifier if present
+    const cookie = req.headers.cookie ?? "";
+    const sessionMatch = cookie.match(/session=([^;]+)/);
+    if (sessionMatch?.[1]) {
+      return sessionMatch[1];
+    }
+    // Fallback for Authorization header auth
+    return crypto.randomUUID();
+  }
+  return null;
 }
 
 export function buildRequestContext(

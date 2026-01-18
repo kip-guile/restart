@@ -12,11 +12,6 @@ type AppState = {
   bootstrap: BootstrapPayload | null;
 };
 
-type AppSliceState = {
-  message: string | null;
-  bootstrap: BootstrapPayload | null;
-};
-
 const initialAppState: AppState = {
   message: null,
   bootstrap: null,
@@ -35,11 +30,14 @@ const appSlice = createSlice({
   },
 });
 
-export function makeStore(opts: {
+type MakeStoreOptions = {
   apiBaseUrl: string;
   preloadedState?: unknown;
-}) {
-  const api = createApiSlice(opts.apiBaseUrl);
+  api?: ReturnType<typeof createApiSlice>;
+};
+
+export function makeStore(opts: MakeStoreOptions) {
+  const api = opts.api ?? createApiSlice(opts.apiBaseUrl);
   const rootReducer = combineReducers({
     app: appSlice.reducer,
     [api.reducerPath]: api.reducer,

@@ -1,205 +1,161 @@
+/**
+ * @fileoverview Main entry point for the BFF (Backend-for-Frontend) server
+ *
+ * WHAT THIS FILE DOES:
+ * This is the starting point of the server. It:
+ * 1. Creates an Express application
+ * 2. Configures middleware (logging, static files)
+ * 3. Registers API routes
+ * 4. Sets up SSR (Server-Side Rendering)
+ * 5. Starts listening for requests
+ *
+ * ARCHITECTURE OVERVIEW:
+ *
+ * ┌─────────────────────────────────────────────────────────────────┐
+ * │                        Express Server                           │
+ * ├─────────────────────────────────────────────────────────────────┤
+ * │  1. Request Logger     - Logs all incoming requests             │
+ * │  2. Static Middleware  - Serves JS, CSS, images                 │
+ * │  3. API Routes         - /api/bootstrap, /api/todos, etc.       │
+ * │  4. SSR Handler        - Renders React for all other routes     │
+ * │  5. 404 Handler        - Catches unmatched requests             │
+ * └─────────────────────────────────────────────────────────────────┘
+ *
+ * REQUEST FLOW:
+ * 1. Browser requests /todos
+ * 2. Request logger records the request
+ * 3. Static middleware checks if it's a file (no)
+ * 4. API routes check if it matches (no)
+ * 5. SSR handler renders the page with React
+ * 6. Response sent to browser
+ * 7. Request logger logs completion with timing
+ *
+ * FILE ORGANIZATION:
+ * - src/index.ts           - This file (app setup)
+ * - src/http/              - HTTP layer (routes, middleware, caching)
+ * - src/server/            - Server logic (bootstrap, caching, SSR)
+ * - src/server/external/   - External API calls
+ * - src/server/ssr/        - React server rendering
+ */
+
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
-import fs from "fs/promises";
 
+// Server utilities
 import { getPort } from "./server/env.js";
-import { buildRequestContext } from "./server/requestContext.js";
-import { getBootstrapPayload, getTodos } from "./server/bootstrap.js";
-import { createHttpClient } from "./server/httpClient.js";
-import { renderHtml } from "./server/ssr/render.js";
-import { TTLCache } from "./server/cache.js";
-import { applyCachePolicy } from "./http/cachePolicy.js";
+
+// HTTP layer
+import { requestLogger, setStaticHeaders } from "./http/middleware.js";
+import { registerRoutes } from "./http/routes.js";
+import { createSsrHandler, create404Handler } from "./http/ssrHandler.js";
+
+// ============================================================================
+// PATH RESOLUTION
+// ============================================================================
+
+/**
+ * In ES Modules, __dirname and __filename don't exist.
+ * We recreate them using import.meta.url.
+ *
+ * WHY WE NEED THIS:
+ * To serve static files, we need absolute paths. These work whether
+ * we're running from src/ (development) or dist/ (production).
+ */
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+/**
+ * Path to the BFF root directory (apps/bff/).
+ * From src/ or dist/, go one level up.
+ */
+const bffRootDir = path.resolve(__dirname, "..");
+
+/**
+ * Path to static assets (apps/bff/static/).
+ * This is where webpack outputs the built frontend.
+ */
+const staticDir = path.join(bffRootDir, "static");
+
+// ============================================================================
+// APPLICATION SETUP
+// ============================================================================
 
 const app = express();
 const port = getPort();
 
-// Resolve absolute paths in a way that works in both:
-// - tsx dev (apps/bff/src/index.ts)
-// - compiled prod (apps/bff/dist/index.js)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// We want apps/bff/static. From src/ or dist/, go one level up to apps/bff/
-const bffRootDir = path.resolve(__dirname, "..");
-const staticDir = path.join(bffRootDir, "static");
-
-async function fileExists(p: string): Promise<boolean> {
-  try {
-    await fs.access(p);
-    return true;
-  } catch {
-    return false;
-  }
-}
+// ============================================================================
+// MIDDLEWARE STACK
+// ============================================================================
 
 /**
- * Find the built client entry bundle.
- * For now we scan static/assets for app.*.js.
- * Later you can switch to a build manifest (more reliable).
+ * 1. REQUEST LOGGING
+ *
+ * Logs all requests with method, URL, status, and duration.
+ * Must be first so it captures all requests.
  */
-async function findClientBundleSrc(): Promise<string> {
-  const assetsDir = path.join(staticDir, "assets");
+app.use(requestLogger());
 
-  const assetsDirExists = await fileExists(assetsDir);
-  if (!assetsDirExists) {
-    throw new Error(
-      `Missing assets directory at ${assetsDir}. Did you run the web build?`,
-    );
-  }
-
-  const files = await fs.readdir(assetsDir);
-
-  // Prefer "app." entry chunk. You can enhance this to check for ".mjs" too if needed.
-  const appFile = files.find((f) => f.startsWith("app.") && f.endsWith(".js"));
-
-  if (!appFile) {
-    throw new Error(
-      `Could not find app.*.js in ${assetsDir}. Found: ${files.join(", ")}`,
-    );
-  }
-
-  // Important: public URL path (served by express.static)
-  return `/assets/${appFile}`;
-}
-
-// Basic request logging with duration
-app.use((req, res, next) => {
-  const start = process.hrtime.bigint();
-
-  res.on("finish", () => {
-    const end = process.hrtime.bigint();
-    const durationMs = Number(end - start) / 1_000_000;
-    console.log(
-      `${req.method} ${req.originalUrl} ${res.statusCode} ${durationMs.toFixed(2)}ms`,
-    );
-  });
-
-  next();
-});
-
-// Serve static assets from apps/bff/static
+/**
+ * 2. STATIC FILE SERVING
+ *
+ * Serves files from the static directory (JS, CSS, images).
+ * Options:
+ * - index: false - Don't auto-serve index.html for directories
+ * - setHeaders - Custom cache headers for different file types
+ */
 app.use(
   express.static(staticDir, {
-    index: false,
-    setHeaders(res, filePath) {
-      const filename = path.basename(filePath);
-
-      // Do not cache HTML entry points
-      if (filename === "index.html" || filename === "404.html") {
-        res.setHeader("Cache-Control", "no-store");
-        res.setHeader("Vary", "Accept-Encoding");
-        return;
-      }
-
-      // Cache hashed assets aggressively
-      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
-        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-        res.setHeader("Vary", "Accept-Encoding");
-        return;
-      }
-
-      res.setHeader("Cache-Control", "public, max-age=3600");
-      res.setHeader("Vary", "Accept-Encoding");
+    index: false, // We handle index via SSR
+    setHeaders: (res, filePath) => {
+      setStaticHeaders({ filePath, res });
     },
-  }),
+  })
 );
 
-// APIs
-app.get("/api/bootstrap", async (req, res) => {
-  const route = typeof req.query.path === "string" ? req.query.path : "/";
-  const ctx = buildRequestContext(req, route);
+// ============================================================================
+// ROUTES
+// ============================================================================
 
-  // Mode is "bootstrap": public cache for anonymous, private no-store for authed.
-  applyCachePolicy(req, res, "bootstrap");
-  const payload = await getBootstrapPayload(ctx);
-  res.status(200).json(payload);
-});
+/**
+ * 3. API ROUTES
+ *
+ * Registers all /api/* endpoints:
+ * - GET /api/bootstrap - Initial page data
+ * - GET /api/todos - Todo list
+ * - GET /api/hello - Test endpoint
+ * - GET /health - Health check
+ */
+registerRoutes(app);
 
-app.get("/api/todos", async (req, res) => {
+/**
+ * 4. SSR HANDLER
+ *
+ * Catches all other GET requests and renders them with React.
+ * This enables client-side routing to work with server rendering.
+ */
+app.get("/*", createSsrHandler(staticDir));
 
-  const ctx = buildRequestContext(req, "/todos");
-  const http = createHttpClient({ requestId: ctx.requestId });
-  // Mode is "data": public cache for anonymous, private no-store for authed.
-  applyCachePolicy(req, res, "data");
+/**
+ * 5. 404 HANDLER
+ *
+ * If nothing else matched, return 404 page.
+ * This catches requests for non-existent files.
+ */
+app.use(create404Handler(staticDir));
 
-  try {
-    const todos = await getTodos(http);
-    res.status(200).json(
-      todos.map((t) => ({
-        id: t.id,
-        title: t.title,
-        completed: t.completed,
-      })),
-    );
-  } catch (err) {
-    console.error(
-      `[todos] FAIL requestId=${ctx.requestId} userId=${ctx.userId}`,
-      err,
-    );
-    res.status(500).json({
-      code: "TODOS_FAILED",
-      message: "Failed to load todos",
-    });
-  }
-});
-
-app.get("/api/hello", (_req, res) => {
-  res.status(200).json({ message: "Hello from the node/express BFF" });
-});
-
-app.get("/api/injected", (_req, res) => {
-  res.status(200).json({ message: "Hello from injected Redux state (BFF)" });
-});
-
-app.get("/health", (_req, res) => {
-  res.status(200).json({
-    status: "ok",
-    uptimeSeconds: Math.floor(process.uptime()),
-    timestamp: new Date().toISOString(),
-  });
-});
-
-// SSR handler for all non-API routes
-app.get(/.*/, async (req, res, next) => {
-  if (req.path.startsWith("/api")) return next();
-  if (path.extname(req.path)) return next(); // real file requests can 404 normally
-
-  const route = req.path;
-  console.log(`SSR request for route: ${route}`);
-
-  try {
-    const ctx = buildRequestContext(req, route);
-    const bootstrap = await getBootstrapPayload(ctx);
-
-    const assetScriptSrc = await findClientBundleSrc();
-
-    // HTML cache: public for anonymous (only safe now that bootstrap is non-personal for anon),
-    // private no-store for authed.
-    applyCachePolicy(req, res, "html");
-    
-    const html = await renderHtml({
-      ctx,
-      bootstrap,
-      assetScriptSrc,
-    });
-
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    // SSR HTML includes personalized bootstrap, so do not allow shared caches.
-    res.setHeader("Cache-Control", "private, no-store");
-    res.setHeader("Vary", "Accept-Encoding");
-    res.status(200).type("html").send(html);
-  } catch (e) {
-    next(e);
-  }
-});
-
-// Fallback 404 HTML
-app.use((_req, res) => {
-  res.status(404).sendFile(path.join(staticDir, "404.html"));
-});
+// ============================================================================
+// START SERVER
+// ============================================================================
 
 app.listen(port, "0.0.0.0", () => {
-  console.log(`BFF listening at http://localhost:${port}`);
-  console.log(`Serving static from: ${staticDir}`);
+  console.log(`
+╔═══════════════════════════════════════════════════════════════╗
+║                    BFF Server Started                         ║
+╠═══════════════════════════════════════════════════════════════╣
+║  URL:     http://localhost:${port}                              ║
+║  Static:  ${staticDir}
+║  Mode:    ${process.env.NODE_ENV || "development"}                                    ║
+╚═══════════════════════════════════════════════════════════════╝
+  `);
 });
