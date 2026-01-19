@@ -19,6 +19,7 @@
  */
 
 import type { Request, Response, NextFunction } from "express";
+import path from "path";
 
 // ============================================================================
 // REQUEST LOGGING
@@ -117,7 +118,6 @@ export type StaticHeadersConfig = {
  * }));
  */
 export function setStaticHeaders({ filePath, res }: StaticHeadersConfig): void {
-  const path = require("path");
   const filename = path.basename(filePath);
 
   // Always include Vary header for correct caching with compression
@@ -126,6 +126,18 @@ export function setStaticHeaders({ filePath, res }: StaticHeadersConfig): void {
   // HTML entry points - never cache
   if (filename === "index.html" || filename === "404.html") {
     res.setHeader("Cache-Control", "no-store");
+    return;
+  }
+
+  // Service Worker - special handling
+  // IMPORTANT: Service workers should NOT be cached aggressively
+  // The browser checks for updates by comparing the SW file content
+  // If we cache it, users won't get updates
+  if (filename === "sw.js") {
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    // Service-Worker-Allowed extends the SW scope beyond its location
+    // We serve from root (/sw.js) so it can control all routes
+    res.setHeader("Service-Worker-Allowed", "/");
     return;
   }
 

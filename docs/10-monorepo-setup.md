@@ -425,6 +425,72 @@ import { sleep } from "@restart/shared/utils"; // Subpath export
 
 ---
 
+## Webpack Configuration for Monorepo
+
+When using webpack with a monorepo, you need special configuration to transpile local packages.
+
+### The Problem
+
+By default, webpack excludes `node_modules` from transpilation:
+
+```javascript
+{
+  test: /\.tsx?$/,
+  use: "ts-loader",
+  exclude: /node_modules/,  // This excludes @restart/* packages!
+}
+```
+
+But `@restart/ui` and `@restart/shared` are symlinked into `node_modules`, so they get excluded.
+
+### The Solution
+
+**File:** `apps/web/webpack.config.cjs`
+
+```javascript
+resolve: {
+  extensions: [".tsx", ".ts", ".js"],
+  // Use source files directly instead of built dist
+  alias: {
+    "@restart/ui": path.resolve(__dirname, "../../packages/ui/src"),
+    "@restart/shared": path.resolve(__dirname, "../../packages/shared/src"),
+  },
+},
+
+module: {
+  rules: [
+    {
+      test: /\.tsx?$/,
+      use: {
+        loader: "ts-loader",
+        options: {
+          configFile: path.resolve(__dirname, "tsconfig.client.json"),
+          transpileOnly: true,
+          // Allow ts-loader to compile files outside the project root
+          allowTsInNodeModules: true,
+        },
+      },
+      // Exclude node_modules EXCEPT our monorepo packages
+      exclude: /node_modules\/(?!@restart)/,
+    },
+  ],
+},
+```
+
+### Why This Works
+
+1. **Aliases** - Webpack resolves `@restart/ui` to the source directory, not `dist`
+2. **Exclude pattern** - `/node_modules\/(?!@restart)/` means "exclude node_modules, but NOT @restart packages"
+3. **allowTsInNodeModules** - Lets ts-loader compile files outside the project root
+
+### Benefits
+
+- **Hot reload works** for package changes during development
+- **No manual rebuild** of packages needed when editing source
+- **Source maps** work correctly for debugging
+
+---
+
 ## Common Issues
 
 ### 1. "Cannot find module"
@@ -432,12 +498,15 @@ import { sleep } from "@restart/shared/utils"; // Subpath export
 **Symptom:** Import fails for local package
 
 **Causes:**
-- Package not built
+- Package not built (for production)
 - Symlink not created
+- Webpack alias not configured (for development)
 
 **Fix:**
 ```bash
-# Rebuild everything
+# For development: Check webpack aliases are configured
+
+# For production: Rebuild everything
 npm run build
 
 # Or reinstall to recreate symlinks

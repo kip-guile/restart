@@ -40,6 +40,8 @@ const webpack = require("webpack");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const { WebpackManifestPlugin } = require("webpack-manifest-plugin");
+const { InjectManifest } = require("workbox-webpack-plugin");
+const CopyWebpackPlugin = require("copy-webpack-plugin");
 
 // Conditionally load bundle analyzer (only when ANALYZE=true)
 let BundleAnalyzerPlugin;
@@ -112,6 +114,11 @@ module.exports = (_env, argv) => {
      */
     resolve: {
       extensions: [".tsx", ".ts", ".js"],
+      // In development, use source files directly instead of built dist
+      alias: {
+        "@restart/ui": path.resolve(__dirname, "../../packages/ui/src"),
+        "@restart/shared": path.resolve(__dirname, "../../packages/shared/src"),
+      },
     },
 
     // ========================================================================
@@ -138,9 +145,12 @@ module.exports = (_env, argv) => {
               // transpileOnly skips type checking for faster builds
               // Type errors are caught by IDE and CI type-check step
               transpileOnly: true,
+              // Allow ts-loader to compile files outside the project root
+              allowTsInNodeModules: true,
             },
           },
-          exclude: /node_modules/,
+          // Exclude node_modules EXCEPT our monorepo packages
+          exclude: /node_modules\/(?!@restart)/,
         },
 
         // CSS files
@@ -170,6 +180,19 @@ module.exports = (_env, argv) => {
         filename: "index.html",
       }),
 
+      // CopyWebpackPlugin - Copy static assets from public/ to output
+      // These files are copied AFTER clean, so they persist across builds
+      // Use this for: 404.html, favicon.ico, robots.txt, etc.
+      new CopyWebpackPlugin({
+        patterns: [
+          {
+            from: path.resolve(__dirname, "public"),
+            to: ".", // Copy to output root
+            noErrorOnMissing: true, // Don't fail if public/ is empty
+          },
+        ],
+      }),
+
       // WebpackManifestPlugin - Generates manifest.json mapping
       // This is how the server knows which hashed filename to use
       new WebpackManifestPlugin({
@@ -197,6 +220,34 @@ module.exports = (_env, argv) => {
 
       // BundleAnalyzerPlugin - Visualize bundle size (when ANALYZE=true)
       ...(process.env.ANALYZE === "true" ? [new BundleAnalyzerPlugin()] : []),
+
+      /**
+       * Workbox InjectManifest - Service Worker with precaching
+       *
+       * WHY INJECTMANIFEST INSTEAD OF GENERATESERVICE WORKER:
+       * - InjectManifest gives us full control over the service worker
+       * - We can define custom caching strategies for different routes
+       * - Better handling of SSR-generated pages vs static assets
+       *
+       * ONLY IN PRODUCTION:
+       * Service workers cache aggressively, which makes development confusing.
+       * In dev mode, you'd need to constantly clear the cache or use
+       * "Update on reload" in DevTools. Easier to skip it entirely.
+       */
+      ...(isProd
+        ? [
+            new InjectManifest({
+              // Our custom service worker source file
+              swSrc: path.resolve(__dirname, "src/service-worker.ts"),
+              // Output filename (served from root for maximum scope)
+              swDest: "sw.js",
+              // Don't include source maps in precache manifest
+              exclude: [/\.map$/, /manifest\.json$/, /index\.html$/],
+              // Maximum file size to precache (2MB)
+              maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
+            }),
+          ]
+        : []),
 
       /**
        * NormalModuleReplacementPlugin - Handle .js extensions in TypeScript
@@ -262,6 +313,20 @@ module.exports = (_env, argv) => {
      * - Hot Module Replacement (HMR) - Update code without full reload
      * - Proxy - Forward API requests to the BFF
      * - History fallback - Serve index.html for client-side routing
+     *
+     * DEV MODE (CSR only):
+     * In development, we use client-side rendering only. RTK Query
+     * automatically fetches data when the cache is empty.
+     *
+     * PRODUCTION (SSR):
+     * In production, the BFF handles all requests, renders with SSR,
+     * and pre-populates RTK Query cache so no fetch is needed.
+     *
+     * WHY NOT SSR IN DEV?
+     * - Faster iteration (no server restart needed)
+     * - Hot module replacement works better
+     * - Easier debugging (single process)
+     * - RTK Query handles data fetching seamlessly
      */
     devServer: {
       host: "0.0.0.0", // Listen on all interfaces (needed for Docker)

@@ -261,6 +261,39 @@ During development, the client runs on port 8080 but APIs are on port 3000. The 
 
 ---
 
+## Static Assets (public/ folder)
+
+Static files that should be included in the build but not processed by webpack go in `apps/web/public/`:
+
+```
+apps/web/public/
+├── 404.html      # Custom 404 page
+├── favicon.ico   # Site icon (if needed)
+└── robots.txt    # Search engine instructions (if needed)
+```
+
+These files are copied to the output directory by `copy-webpack-plugin` after webpack cleans the directory.
+
+**Why not put them directly in `apps/bff/static/`?**
+
+Webpack's `clean: true` option deletes everything in the output directory before each build. Files in `public/` are copied after the clean, so they survive rebuilds.
+
+**Configuration:** `apps/web/webpack.config.cjs`
+
+```javascript
+new CopyWebpackPlugin({
+  patterns: [
+    {
+      from: path.resolve(__dirname, "public"),
+      to: ".",
+      noErrorOnMissing: true,
+    },
+  ],
+}),
+```
+
+---
+
 ## Build Commands
 
 ### Development

@@ -133,8 +133,11 @@ registerRoutes(app);
  *
  * Catches all other GET requests and renders them with React.
  * This enables client-side routing to work with server rendering.
+ *
+ * NOTE: Express 5 requires named wildcard parameters.
+ * The syntax "{*path}" captures everything after "/" into req.params.path
  */
-app.get("/*", createSsrHandler(staticDir));
+app.get("/{*path}", createSsrHandler(staticDir));
 
 /**
  * 5. 404 HANDLER

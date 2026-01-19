@@ -99,10 +99,22 @@ export function createApiSlice(baseUrl: string) {
 import { useGetTodosQuery } from "@restart/ui";
 
 function TodosPage() {
-  const { data, isLoading, error } = useGetTodosQuery();
+  const { data, isLoading, error, refetch } = useGetTodosQuery();
 
-  if (isLoading) return <p>Loading...</p>;
-  if (error) return <p>Error loading todos</p>;
+  // Only show loading if actually loading AND no cached data
+  // This prevents flicker during SSR hydration
+  if (isLoading && !data) {
+    return <p>Loading...</p>;
+  }
+
+  if (error) {
+    return (
+      <div>
+        <p>Error loading todos</p>
+        <button onClick={() => refetch()}>Retry</button>
+      </div>
+    );
+  }
 
   return (
     <ul>
@@ -113,6 +125,19 @@ function TodosPage() {
   );
 }
 ```
+
+### SSR vs CSR Data Loading
+
+RTK Query handles both modes seamlessly:
+
+| Mode | Port | What Happens |
+|------|------|--------------|
+| **CSR** (dev) | 8080 | Hook finds empty cache, fetches `/api/todos` automatically |
+| **SSR** (prod) | 3000 | Cache pre-populated via `upsertQueryData`, no fetch needed |
+
+**Why `isLoading && !data`?**
+
+During SSR hydration, there's a brief moment where `isLoading` is true even though cached data exists. Checking `!data` prevents showing a loading spinner when data is already available.
 
 ### Hook Return Values
 

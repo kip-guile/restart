@@ -11,6 +11,7 @@ This is a **full-stack React application** demonstrating production-ready patter
 - **Monorepo Architecture** for shared code between server and client
 - **Type Safety** with strict TypeScript throughout
 - **Modern Tooling** with Webpack, ESLint, and Docker
+- **Service Workers** for offline support and caching (Workbox)
 
 ## Architecture Overview
 
@@ -82,6 +83,8 @@ This is a **full-stack React application** demonstrating production-ready patter
 | [10 - Monorepo Setup](./10-monorepo-setup.md) | Workspace configuration and shared packages |
 | [11 - Hot Module Replacement](./11-hmr.md) | Development experience with hot reload |
 | [12 - Code Splitting](./12-code-splitting.md) | Bundle optimization strategies |
+| [13 - Service Workers](./13-service-workers.md) | Workbox, caching strategies, offline support |
+| [14 - Dev vs Prod](./14-dev-vs-prod.md) | Differences between development and production modes |
 
 ## Quick Start
 
@@ -116,8 +119,10 @@ restart/
 │   │
 │   └── web/                 # Frontend entry point
 │       ├── src/
-│       │   ├── main.tsx     # Client entry point
-│       │   └── bootstrap.ts # State reading from window
+│       │   ├── main.tsx         # Client entry point
+│       │   ├── bootstrap.ts     # State reading from window
+│       │   ├── service-worker.ts # Service worker (Workbox)
+│       │   └── sw-register.ts   # SW registration logic
 │       └── webpack.config.cjs
 │
 ├── packages/
@@ -148,6 +153,8 @@ restart/
 | **Isomorphic** | Code that runs identically on both server and client. |
 | **RTK Query** | Redux Toolkit's data fetching library with built-in caching. |
 | **Monorepo** | A single repository containing multiple packages/apps. |
+| **Service Worker** | A script that runs in the background, enabling offline support and caching. |
+| **Workbox** | Google's library for building service workers with pre-built caching strategies. |
 
 ## Learning Path
 

@@ -221,7 +221,64 @@ const { store } = makeStore({
 });
 ```
 
-### Step 3: Hydrate React
+### Step 3: Hydrate RTK Query Cache
+
+**This is critical and easy to get wrong!**
+
+RTK Query stores cached data in the Redux store, and that data IS included in `preloadedState`. However, RTK Query's internal subscription tracking doesn't survive serialization.
+
+**The Problem:**
+```typescript
+// Server populates cache:
+store.dispatch(api.util.upsertQueryData("getTodos", undefined, todos));
+
+// preloadedState includes:
+{
+  api: {
+    queries: {
+      "getTodos(undefined)": {
+        status: "fulfilled",
+        data: [/* todos */]
+      }
+    }
+  }
+}
+
+// Client creates store with preloadedState...
+// But useGetTodosQuery() still shows isLoading: true! 😱
+```
+
+**Why?** RTK Query hooks track subscriptions internally. When you pass `preloadedState`, the data is in the store, but the hook doesn't "know" about it because no subscription was ever created for that query.
+
+**The Solution:** Explicitly populate the cache on the client, even when preloadedState exists:
+
+**File:** `apps/web/src/main.tsx`
+
+```typescript
+// Get bootstrap data from preloaded state
+let bootstrap = preloadedState?.app?.bootstrap;
+
+if (!bootstrap) {
+  // No preloaded state - fetch bootstrap
+  bootstrap = await getBootstrap(window.location.pathname);
+  applyBootstrapToStore(bootstrap, store.dispatch);
+}
+
+// ALWAYS seed RTK Query cache - even with preloadedState!
+// This creates the subscription tracking that hooks need
+if (bootstrap?.page?.kind === "todos") {
+  store.dispatch(
+    api.util.upsertQueryData("getTodos", undefined, bootstrap.page.todos)
+  );
+}
+```
+
+**Why This Works:**
+- `upsertQueryData` both stores the data AND sets up proper subscription tracking
+- The hook then sees the cache entry and returns `isLoading: false` with data
+- No network request is made because the cache is already populated
+
+### Step 4: Hydrate React
 
 ```typescript
 const app = (
@@ -235,6 +292,121 @@ const app = (
 // Store has same state as server → React renders same HTML
 hydrateRoot(document.getElementById("root")!, app);
 ```
+
+---
+
+## RTK Query SSR Flow (Complete Picture)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         SERVER                                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. Fetch todos from external API                               │
+│     const todos = await getTodos(http);                         │
+│                                                                  │
+│  2. Create bootstrap payload                                     │
+│     { route: "/todos", page: { kind: "todos", todos } }         │
+│                                                                  │
+│  3. Create Redux store                                           │
+│     const { store, api } = makeStore({ apiBaseUrl: "/api" });   │
+│                                                                  │
+│  4. Apply bootstrap to app slice                                 │
+│     applyBootstrapToStore(bootstrap, store.dispatch);           │
+│                                                                  │
+│  5. Populate RTK Query cache (for SSR HTML to match)            │
+│     store.dispatch(                                              │
+│       api.util.upsertQueryData("getTodos", undefined, todos)    │
+│     );                                                           │
+│                                                                  │
+│  6. Render React to HTML                                         │
+│     renderToString(<App />)                                      │
+│     // useGetTodosQuery() returns { data: todos, isLoading: false }
+│                                                                  │
+│  7. Serialize state to HTML                                      │
+│     window.__PRELOADED_STATE__ = store.getState();              │
+│     window.__BOOTSTRAP__ = bootstrap;                            │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                         CLIENT                                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. Read preloaded state                                         │
+│     const preloadedState = readPreloadedStateFromWindow();      │
+│                                                                  │
+│  2. Create store with preloaded state                            │
+│     const { store } = makeStore({ preloadedState, api });       │
+│                                                                  │
+│  3. Get bootstrap from preloaded state                           │
+│     const bootstrap = preloadedState.app.bootstrap;             │
+│                                                                  │
+│  4. RE-POPULATE RTK Query cache (critical!)                      │
+│     store.dispatch(                                              │
+│       api.util.upsertQueryData("getTodos", undefined, todos)    │
+│     );                                                           │
+│     // This creates subscription tracking that hooks need        │
+│                                                                  │
+│  5. Hydrate React                                                │
+│     hydrateRoot(rootEl, <App />)                                │
+│     // useGetTodosQuery() returns { data: todos, isLoading: false }
+│     // HTML matches! No hydration mismatch.                      │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## CSR Mode (Development)
+
+In development, we use Client-Side Rendering (CSR) via webpack-dev-server on port 8080. There's no SSR, so the flow is simpler:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         CLIENT (CSR)                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. No preloaded state (window.__PRELOADED_STATE__ is undefined) │
+│     const preloadedState = undefined;                           │
+│                                                                  │
+│  2. Create empty store                                           │
+│     const { store } = makeStore({ api });                       │
+│                                                                  │
+│  3. Render React immediately                                     │
+│     createRoot(rootEl).render(<App />);                         │
+│                                                                  │
+│  4. Component mounts, useGetTodosQuery() is called              │
+│     // Returns { isLoading: true, data: undefined }             │
+│                                                                  │
+│  5. RTK Query automatically fetches /api/todos                   │
+│                                                                  │
+│  6. Fetch completes, cache populated                             │
+│     // Returns { isLoading: false, data: [...todos] }           │
+│                                                                  │
+│  7. Component re-renders with data                               │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Why CSR in Development?
+
+| Benefit | Explanation |
+|---------|-------------|
+| **Faster iteration** | No server restart needed for UI changes |
+| **Hot Module Replacement** | Changes appear instantly without page reload |
+| **Simpler debugging** | Single process, easier stack traces |
+| **RTK Query handles everything** | Automatic fetching when cache is empty |
+
+### Development vs Production
+
+| Aspect | Development (CSR) | Production (SSR) |
+|--------|-------------------|------------------|
+| **Port** | 8080 (webpack-dev-server) | 3000 (BFF) |
+| **Initial render** | Empty, then loading spinner | Full content immediately |
+| **Data fetching** | Client-side via RTK Query | Pre-populated on server |
+| **Time to content** | Slower (fetch after load) | Faster (content in HTML) |
 
 ---
 

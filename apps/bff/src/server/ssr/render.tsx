@@ -51,14 +51,15 @@ export async function renderHtml(opts: {
   // 1) Put bootstrap into Redux (shared mapping logic)
   applyBootstrapToStore(opts.bootstrap, store.dispatch);
 
-  // 2) Optional: prefill RTK Query on the server so SSR HTML matches hydrated UI
+  // 2) Prefill RTK Query cache with bootstrap data
+  // NOTE: We DON'T initiate a fetch here because:
+  // - We already have the data from bootstrap
+  // - Server-side fetch would need an absolute URL
+  // - upsertQueryData directly populates the cache without a network request
   if (opts.bootstrap.page.kind === "todos") {
-    // initiate expects the query arg; your getTodos query arg type looks like void,
-    // so we pass undefined explicitly.
-    store.dispatch(api.endpoints.getTodos.initiate(undefined));
-
-    // Wait for any pending RTKQ queries to finish on the server
-    await Promise.all(store.dispatch(api.util.getRunningQueriesThunk()));
+    store.dispatch(
+      api.util.upsertQueryData("getTodos", undefined, opts.bootstrap.page.todos)
+    );
   }
 
   // 3) Render React to HTML string
