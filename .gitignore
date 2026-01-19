@@ -9,16 +9,12 @@ node_modules/
 dist/
 
 # =========================
-# Client build output (webpack)
+# Client build output (webpack -> apps/bff/static/)
 # =========================
-static/assets/
-static/index.html
-static/manifest.json
-static/sw.js
-
-# If later you decide to let webpack also build 404.html,
-# uncomment the next line:
-# static/404.html
+apps/bff/static/assets/
+apps/bff/static/index.html
+apps/bff/static/manifest.json
+apps/bff/static/sw.js
 
 # =========================
 # Logs
